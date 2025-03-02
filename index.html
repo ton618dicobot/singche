@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>멀티플레이 온라인 게임</title>
+    <style>
+      body {
+        margin: 0;
+        overflow: hidden; /* 스크롤 제거 */
+        background-color: #282c34; /* 배경색 추가 */
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+      }
+      canvas {
+        background-color: white; /* 캔버스 배경색 */
+        border: 2px solid black;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="canvas"></canvas>
+
+    <!-- Socket.io 및 jQuery 추가 -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="http://code.jquery.com/jquery-1.11.1.js"></script>
+    <script src="main.js"></script>
+    <script>
+      // Ctrl + (+), (-), (0) 단축키 확대/축소 방지
+      window.addEventListener("keydown", function (event) {
+        if (
+          (event.ctrlKey || event.metaKey) &&
+          (event.key === "+" || event.key === "-" || event.key === "0")
+        ) {
+          event.preventDefault();
+        }
+      });
+
+      // Ctrl + 마우스 휠 확대/축소 방지
+      window.addEventListener(
+        "wheel",
+        function (event) {
+          if (event.ctrlKey) {
+            event.preventDefault();
+          }
+        },
+        { passive: false }
+      ); // 🔥 이 옵션이 없으면 일부 브라우저에서 동작 안 함!
+    </script>
+  </body>
+</html>
