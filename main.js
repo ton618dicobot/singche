@@ -1,16 +1,22 @@
 var canvas = document.getElementById("canvas");
 var ctx = canvas.getContext("2d");
 
-var squareSize = 60;
 var boardX = 6; // 6 x 6 으로 보드 생성
-canvas.width = squareSize * 11;
-canvas.height = squareSize * 11;
-var cameraSize = squareSize * 11;
-var boardSize = squareSize * 8;
+let scale = 1;
+var squareSize = 60 * scale;
+var cameraSize = squareSize * 11 * scale;
+var boardSize = squareSize * 8 * scale;
 var materialSize = squareSize * (2 / 3);
-
 var socket = io(); // 소켓 연결
 var players = {}; // 플레이어 저장 객체
+var cameraPos = { x: 0, y: 0 };
+
+canvas.width = Math.min(window.innerWidth, window.innerHeight);
+canvas.height = Math.min(window.innerWidth, window.innerHeight);
+
+//해상도
+const GAME_WIDTH = cameraSize;
+const GAME_HEIGHT = cameraSize;
 
 // 보드 이미지 로딩
 var boardImg = new Image();
@@ -61,120 +67,24 @@ moveableImg.src = "img/moveable_square.png";
 var mySquareImg = new Image();
 mySquareImg.src = "img/my_square.png";
 
-// 기물 행마
-moveSquares = [
-  [
-    [0, 1],
-    [1, 1],
-    [1, 0],
-    [1, -1],
-    [0, -1],
-    [-1, -1],
-    [-1, 0],
-    [-1, 1],
-  ],
-  [
-    [1, 1],
-    [2, 2],
-    [3, 3],
-    [4, 4],
-    [1, -1],
-    [2, -2],
-    [3, -3],
-    [4, -4],
-    [-1, -1],
-    [-2, -2],
-    [-3, -3],
-    [-4, -4],
-    [-1, 1],
-    [-2, 2],
-    [-3, 3],
-    [-4, 4],
-    [0, 1],
-    [0, 2],
-    [0, 3],
-    [0, 4],
-    [1, 0],
-    [2, 0],
-    [3, 0],
-    [4, 0],
-    [0, -1],
-    [0, -2],
-    [0, -3],
-    [0, -4],
-    [-1, 0],
-    [-2, 0],
-    [-3, 0],
-    [-4, 0],
-  ],
-  [
-    [0, 1],
-    [0, 2],
-    [0, 3],
-    [0, 4],
-    [1, 0],
-    [2, 0],
-    [3, 0],
-    [4, 0],
-    [0, -1],
-    [0, -2],
-    [0, -3],
-    [0, -4],
-    [-1, 0],
-    [-2, 0],
-    [-3, 0],
-    [-4, 0],
-  ],
-  [
-    [1, 1],
-    [2, 2],
-    [3, 3],
-    [4, 4],
-    [1, -1],
-    [2, -2],
-    [3, -3],
-    [4, -4],
-    [-1, -1],
-    [-2, -2],
-    [-3, -3],
-    [-4, -4],
-    [-1, 1],
-    [-2, 2],
-    [-3, 3],
-    [-4, 4],
-  ],
-  [
-    [1, 2],
-    [2, 1],
-    [2, -1],
-    [1, -2],
-    [-1, -2],
-    [-2, -1],
-    [-2, 1],
-    [-1, 2],
-  ],
-];
 // 기물 쿨타임
-cooltimes = [0.9, 1.9, 1.2, 1.1, 1.1];
+cooltimes = [0.9, 1.8, 1.1, 1.0, 1.0];
 
 // 내 캐릭터 정보
-var myPlayer = {
-  x: Math.floor(Math.random() * 8),
-  y: Math.floor(Math.random() * 8),
-  speed: 0.1,
-  material: 2,
-  score: 0,
-};
-
-// 카메라 위치
-var cameraPos = {
-  x: myPlayer.x * squareSize + squareSize / 2 - cameraSize / 2,
-  y: myPlayer.y * squareSize + squareSize / 2 - cameraSize / 2,
-};
+var myPlayer = {};
 
 // 서버에 내 캐릭터 정보 전송
-socket.emit("newPlayer", myPlayer);
+socket.emit("newPlayer");
 
+// 서버에서 초기 정보 수신
+socket.on("initPlayer", function (playerData) {
+  console.log("내 플레이어 정보 초기화:", playerData);
+  myPlayer = playerData;
+  cameraPos = {
+    x: myPlayer.x * squareSize + squareSize / 2 - cameraSize / 2,
+    y: myPlayer.y * squareSize + squareSize / 2 - cameraSize / 2,
+  };
+});
 // 키 입력 상태 저장
 var keys = {};
 
@@ -191,33 +101,32 @@ const FPS = 60;
 setInterval(updateGame, 1000 / FPS);
 
 function updateGame() {
-  movePlayer();
+  moveCamera();
   socket.emit("movePlayer", {
     x: myPlayer.x,
     y: myPlayer.y,
     material: myPlayer.material,
     score: myPlayer.score,
   });
-  drawPlayers();
+  loadImages();
 }
 
 // 플레이어 이동 처리
-function movePlayer() {
-  if (keys["ArrowRight"]) myPlayer.x += myPlayer.speed;
-  if (keys["ArrowLeft"]) myPlayer.x -= myPlayer.speed;
-  if (keys["ArrowUp"]) myPlayer.y -= myPlayer.speed;
-  if (keys["ArrowDown"]) myPlayer.y += myPlayer.speed;
-
-  if (keys["d"]) cameraPos.x += 5;
-  if (keys["a"]) cameraPos.x -= 5;
-  if (keys["w"]) cameraPos.y -= 5;
-  if (keys["s"]) cameraPos.y += 5;
+function moveCamera() {
+  if (keys["d"]) cameraPos.x += 5 * scale;
+  if (keys["a"]) cameraPos.x -= 5 * scale;
+  if (keys["w"]) cameraPos.y -= 5 * scale;
+  if (keys["s"]) cameraPos.y += 5 * scale;
 }
 
 // 서버에서 모든 플레이어 정보 수신
 socket.on("updatePlayers", function (serverPlayers) {
+  if (!serverPlayers || Object.keys(serverPlayers).length === 0) {
+    console.warn("서버에서 플레이어 데이터 없음");
+    return; // 빈 객체일 경우 그리지 않음
+  }
   players = serverPlayers;
-  drawPlayers();
+  loadImages();
 });
 
 function moveableSquares() {
@@ -227,8 +136,10 @@ function moveableSquares() {
   for (let id in players) {
     if (id === socket.id) continue;
     let player = players[id];
+
     playersPos.push([player.x, player.y]);
   }
+
   var array = [];
   var kingSquares = [
     [0, 1],
@@ -262,9 +173,10 @@ function moveableSquares() {
     [-1, -1],
     [-1, 1],
   ];
+  // 룩 이동
   if (material === 2 || material === 1) {
     for (const pair of rookPairs) {
-      for (let j = 1; j <= 4; j++) {
+      for (let j = 1; j <= 5; j++) {
         var squareX = myPlayer.x + j * pair[0];
         var squareY = myPlayer.y + j * pair[1];
         array.push([squareX, squareY]);
@@ -273,6 +185,7 @@ function moveableSquares() {
       }
     }
   }
+  // 비숍 이동
   if (material === 3 || material === 1) {
     for (const pair of bishopPairs) {
       for (let j = 1; j <= 4; j++) {
@@ -294,15 +207,23 @@ function moveableSquares() {
       array.push([myPlayer.x + pos[0], myPlayer.y + pos[1]]);
     }
   }
+
   // 보드 바깥으로 나가는 것은 삭제
   array = array.filter(
     (pos) =>
-      !(pos[0] < 0 || pos[0] > boardX * 8 || pos[1] < 0 || pos[1] > boardX * 8)
+      !(
+        pos[0] < 0 ||
+        pos[0] >= boardX * 8 ||
+        pos[1] < 0 ||
+        pos[1] >= boardX * 8
+      )
   );
+
   canvas.onclick = function (event) {
     const mouseX = event.clientX - ctx.canvas.offsetLeft;
     const mouseY = event.clientY - ctx.canvas.offsetTop;
     for (const pos of array) {
+      socket.emit("");
       const posX = pos[0] * squareSize - cameraPos.x;
       const posY = pos[1] * squareSize - cameraPos.y;
       if (
@@ -321,8 +242,17 @@ function moveableSquares() {
 }
 
 // 이미지 그리기
-function drawPlayers() {
+function loadImages() {
+  // 화면 비율에 맞게 스케일 조정
+  canvas.width = Math.min(window.innerWidth, window.innerHeight);
+  canvas.height = Math.min(window.innerWidth, window.innerHeight);
+  scale = Math.min(canvas.width / GAME_WIDTH, canvas.height / GAME_HEIGHT);
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+  squareSize = 60 * scale;
+  cameraSize = squareSize * 11 * scale;
+  boardSize = squareSize * 8;
+  materialSize = squareSize * (2 / 3);
+
   // 보드 그리기
   for (i = 0; i < boardX; i++) {
     for (j = 0; j < boardX; j++) {
@@ -361,7 +291,7 @@ function drawPlayers() {
     if (id === socket.id) continue;
     let player = players[id];
     ctx.drawImage(
-      materialsRedImg[player.material],
+      materialsRedImg[myPlayer.material],
       player.x * squareSize + squareSize / 2 - materialSize / 2 - cameraPos.x,
       player.y * squareSize + squareSize / 2 - materialSize / 2 - cameraPos.y,
       materialSize,
